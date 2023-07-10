@@ -2,14 +2,15 @@ FROM php:8.1-fpm-alpine3.18
 
 RUN deluser www-data || true
 RUN delgroup www-data || true
-RUN adduser -D -H -u 1000 -s /bin/sh www-data
+RUN adduser -D -u 1000 -s /bin/sh www-data
 
 RUN set -ex && \
   apk add --update --no-cache \
   libzip-dev \
   libxml2-dev \
   libpng-dev \
-  libjpeg-turbo-dev
+  libjpeg-turbo-dev \
+  mariadb-client
 
 RUN set -ex && \
   docker-php-ext-install \
