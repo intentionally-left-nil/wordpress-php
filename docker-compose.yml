@@ -1,0 +1,70 @@
+# This is a test harness to verify the php image and the nginx image work well together
+
+volumes:
+  db:
+  wordpress:
+
+services:
+  php:
+    build: .
+    init: true
+    volumes:
+      - wordpress:/var/www/html
+
+    healthcheck:
+      test: 'netstat -an | grep 9000'
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  nginx:
+    image: ghcr.io/intentionally-left-nil/wordpress-nginx:main
+    restart: unless-stopped
+    init: true
+    ports:
+      - '8000:80'
+    volumes:
+      - wordpress:/var/www/html:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -so /dev/null http://localhost || exit 1']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  db:
+    image: mariadb:11-jammy
+    restart: unless-stopped
+    init: true
+    environment:
+      - MARIADB_ROOT_PASSWORD=wordpress
+      - MARIADB_DATABASE=wordpress
+    volumes:
+      - db:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          'CMD',
+          '/usr/local/bin/healthcheck.sh',
+          '--connect',
+          '--innodb_initialized',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  install_wordpress:
+    build: .
+    volumes:
+      - wordpress:/var/www/html
+    command: >
+      /bin/su -s /bin/sh -c '
+      wp core download && 
+      wp config create --dbname=wordpress --dbuser=root --dbpass=wordpress --dbhost=db &&
+      wp core install --url=localhost:8000 --title=test --admin_user=test --admin_password=test --admin_email=test@example.com --skip-email
+      ' www-data
+    depends_on:
+      db:
+        condition: service_healthy
+      php:
+        condition: service_healthy
+      nginx:
+        condition: service_healthy
