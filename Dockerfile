@@ -1,4 +1,4 @@
-FROM php:8.3-fpm-alpine3.19
+FROM php:8.3-fpm-alpine3.20
 
 RUN deluser www-data || true
 RUN delgroup www-data || true
